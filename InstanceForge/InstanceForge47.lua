@@ -945,7 +945,7 @@ local function runNormal(displayHandle)
     -- dialog 2: one input per type (empty = skip)
     -- (MA3 shows inputs in alphabetical order)
     local inputs = {
-        { name = "BuskDFX group", value = buskG and tostring(buskG) or "", whitefilter = "12345678" },
+        { name = "BuskDFX group", value = "", whitefilter = "12345678" },   -- toolkit: empty by default (numbers from Start Group) ; type 1-8 for BuskDFX numbering
         { name = "Manual instances", value = "" },
         { name = "Prefix",      value = "" },
         { name = "Start Group", value = tostring(suggestStart()), whitefilter = "0123456789" },
