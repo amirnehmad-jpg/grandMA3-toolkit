@@ -15,6 +15,9 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Selection: `SelectionFirst()` / `SelectionNext(idx)` -> `idx, gridX, gridY, gridZ` (PATCH order); `GetSubfixture(idx)`; `:ToAddr()` -> "Fixture 21.3.1".
 - `GetDMXValue` returns nil / -1 on onPC: never verify by DMX.
 - Programmer read: `GetProgPhaser(GetUIChannelIndex(SelectionFirst(), GetAttributeIndex("Zoom")), false)[1].absolute` (also `absolute_value`, `channel_function`).
+- Code that must travel with the show (a console without your files): an imported component's code is stored in the show (manual: InStream = Yes), but files it reads
+  with `io.open` / `loadfile` are not. Embed the modules as long strings `[=====[ ... ]=====]` in the ONE component file and `load(src, "@name", "t", env)` them;
+  let the disk files win when ALL are present (development), log which was used. Re-import the plugin before going to a console.
 
 ## Objects from Lua
 - Children: `parent:Append(class)` (not `Create`): macro line `m:Append()` + `l:Set("Command", c)`; recipe line `part:Append("StandardRecipe")` (no pop-up); empty layout element `layout:Append()`.
@@ -34,6 +37,8 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Tags on macro LINES: `Assign Tag "T" At Macro 1301.2`; switch many lines: `Set Macro a Thru b.* Property "Enabled" "No" If Tag "T"`.
 - `$VAR` unquoted expands (also as object number, as the command word: `$CMD DataPool 3 Sequence $N`). Inside quotes: not expanded. Not inside a variable name. Adjacent numeric vars are ADDED (`$A$B` 2100+30).
 - `SetUserVariable "X" (prompt?)` opens a text input window (the `( )` syntax).
+- Oops takes back the objects of a plugin run (one `CreateUndo`) but NOT user variables set with `SetVar` -> a plugin that remembers objects in a variable must check they still exist.
+- A new DataPool comes with an empty Sequence 1 "Default".
 - `SetUserVariable "X" At Sequence n Property "SpeedScale"` stores a property in a variable.
 - Macro line `Execute` = No (`line:Set("Execute", "No")`): the line is only TYPED into the command line; the next tap on an object completes and runs it, then the macro goes on with the next line. (A plugin macro: line 1 Lua snapshot, line 2 typed `Store`, line 3 Lua finds what the tap made.)
 - `Wait` per line: `line:Set("Wait", "0.3")`. Line name: `l:Set("Name", ...)`.
@@ -60,6 +65,11 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
   A Goto on a picker from another cue command runs that picker's cue command.
 - Recipe line: `Assign Group n / Preset p.n / MAtricks m At Sequence S Cue C Part 0.k`. Lua reads `line:Get("Selection")` (group handle), `Values` (preset), `MAtricks`.
   `Assign Group n At Sequence s Cue 1 Thru Part 0.1` swaps all at once; a running recipe follows.
+- Shared Data copy: `Assign Sequence X At Sequence Y` (Y empty) -> Y's cues ARE X's cue objects (`ObjectList("Sequence Y Cue 2")[1] == ObjectList("Sequence X Cue 2")[1]`);
+  a change to a cue of X shows in Y; each sequence keeps its own playback (Go / X fader). Deleting Y keeps X's cues. Executors of ONE sequence share its filters -> a copy per fader.
+- `Assign World n At Sequence m` sets InputFilter AND OutputFilter; clear the input one with `Set Sequence m Property "InputFilter" ""` (else a store into the cue keeps only
+  that world's fixtures). No filter: `Set Sequence m Property "OutputFilter" ""`. A world from a selection with minus: `Group 6 - Group 11 - Group 12`, `Store World n /Overwrite /NoConfirm`
+  (verified on the faders: the rest stays on the main fader). World 1 is locked.
 - Recipe line on / off: property `Enabled` ("Yes"/"No", reads false) - `ACTIVE` changes but does nothing. A disabled line just stops (no fade).
 - `SelectionMode` "Normal" (values reach sub-fixtures) / "Strict" (masters only).
 - Recipe lines have their own MAtricks fields; writing cue lines at show time freezes the screen 1-2 s (Total Reference Update) - use MAtricks objects.
@@ -194,6 +204,7 @@ MA3 has no telnet. Command lines go in over OSC, answers come back from a Lua pl
   the script writes its log, then SendOSC says done. The script only answers over OSC when the argument holds `osc` (manual runs skip it).
 - Run the sender in-process in PowerShell (`& .\ma3osc.ps1 -Command '...'`); through `powershell -File` the inner double quotes get lost.
 - Read-only commands freely; anything that changes the show: ask the user first. Never while the user runs a show. Before a show: Receive Command = No.
+- Answers can lag: wait ~3 s after a command before reading the reply / a value it changed. Never test while the user presses on the console (the presses mix).
 - `Import Group n /File "x.xml" /Path "<dir>" /NoConfirm` builds a group with grid positions from a hand-written xml
   (`<Group Name=..><SelectionData Size=N><Item IDType="0" ID="31.4" X="3" Y="0" Z="0"/>`; no Guid needed).
 
