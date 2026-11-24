@@ -37,6 +37,10 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Tags on macro LINES: `Assign Tag "T" At Macro 1301.2`; switch many lines: `Set Macro a Thru b.* Property "Enabled" "No" If Tag "T"`.
 - `$VAR` unquoted expands (also as object number, as the command word: `$CMD DataPool 3 Sequence $N`). Inside quotes: not expanded. Not inside a variable name. Adjacent numeric vars are ADDED (`$A$B` 2100+30).
 - `SetUserVariable "X" (prompt?)` opens a text input window (the `( )` syntax).
+- A macro line "Macro n" (or `Go+ DataPool d Macro n`) does NOT finish n before the caller's next line: n runs after (verified 25 Nov: a sub-macro that set variables, then a line reading them, saw the old values). Chain by calling the next step at the END of the sub-macro.
+- A variable can be the command word of a line: `$DS_CL Sequence 26 Cue 3` with DS_CL = "Goto" (LIVE) or "List" (only prints) = a conditional Goto as the FIRST line of a tap, no sub-macro (verified 25 Nov).
+- Every macro line costs time: a Goto after ~25 lines of bookkeeping (appearances, variables, MAtricks copies) came ~0.5 s late in the 3D. Put the Goto first; avoid MAtricks copies on a tap.
+- Measured (2.5.1, Lua `CurrentChild()` polled with `coroutine.yield`): a macro runs ~2 lines per frame (~32 ms). One `Goto` line per sequence = the 8th sequence 127 ms late. One line for all: `Goto Sequence 26 + 27 + 34 Cue 3` (or `Goto Cue 3 Sequence 26 + 27`) moves them in the same frame. `If Tag "T"` filters sequences too (`Assign Tag "T" At Sequence n`); keep an always-tagged park sequence (17 empty cues: `Store Sequence n Cue 1 Thru 17` with an empty programmer works).
 - Oops takes back the objects of a plugin run (one `CreateUndo`) but NOT user variables set with `SetVar` -> a plugin that remembers objects in a variable must check they still exist.
 - A new DataPool comes with an empty Sequence 1 "Default".
 - `SetUserVariable "X" At Sequence n Property "SpeedScale"` stores a property in a variable.
@@ -205,6 +209,8 @@ MA3 has no telnet. Command lines go in over OSC, answers come back from a Lua pl
 - Run the sender in-process in PowerShell (`& .\ma3osc.ps1 -Command '...'`); through `powershell -File` the inner double quotes get lost.
 - Read-only commands freely; anything that changes the show: ask the user first. Never while the user runs a show. Before a show: Receive Command = No.
 - Answers can lag: wait ~3 s after a command before reading the reply / a value it changed. Never test while the user presses on the console (the presses mix).
+- Selecting sub-fixtures (instances) by command: `Fixture 201.2 + Fixture 201.3` works (repeat the keyword); `Fixture 201.2 + 201.3` and `Fixture 201.2 Thru 208.2` select nothing (2.5.1.1, verified by storing a group and counting its items).
+  A group of main fixtures selects only the mains: GetUIChannelIndex finds no colour channels when the colour lives in the parts (JDC1: .1 Beam = Dimmer, .2 Plate + .3 Background = RGB).
 - `Import Group n /File "x.xml" /Path "<dir>" /NoConfirm` builds a group with grid positions from a hand-written xml
   (`<Group Name=..><SelectionData Size=N><Item IDType="0" ID="31.4" X="3" Y="0" Z="0"/>`; no Guid needed).
 
