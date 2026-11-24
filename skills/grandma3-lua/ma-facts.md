@@ -69,6 +69,13 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Release: a recipe line with a `Specials:Release` preset + MAtricks fades back to what is underneath.
 - Off When Overridden: a sequence goes off when another takes ALL its attributes.
 - Priority order: Super > Swap > Highest > High > LTP > Low. Swap sits above Highest (a Swap sequence beats Highest).
+- Building a look sequence from Lua: `Store Sequence S Cue n /Overwrite` with an EMPTY programmer, then per cue `part:Append("StandardRecipe")`
+  + `line:Set("Selection", group)`, `Values` (preset handle), MAtricks fields `SPEEDFROMX` (BPM of one phaser cycle), `PHASEFROMX`/`PHASETOX`,
+  `XGROUP`, `XBLOCK`, `XWINGS`, `XSHUFFLE`. Alternating odd/even: `XGROUP 2` + phase 0 -> 180. Cue name via `cue:Set("Name", ..)`.
+- A bump sequence from the programmer: select, `At Preset p.n`, `Store Sequence S Cue n /Overwrite`; OffCue `CueInFade` = the release fade; `AutoStomp` true.
+- A 2-cue sequence that flips by itself (half rig A / half rig B): both cues `TrigType` "Time", `TrigTime` = 60/BPM, the sequence's `WRAPAROUND` true,
+  and Tracking off (otherwise cue 1's half keeps running in cue 2).
+- Strobes / flashes: NO phase spread across fixtures (0 -> 360 turns a strobe into a chase). Spread phase only for waves and chases.
 
 ## Presets, attributes
 - Write a value: `Attribute "<logical channel>" At Absolute Decimal24 <dmx>` (sub-function names like `Gobo2PosRotate` are refused -> logical channel). `Attribute "ColorRGB_R" At Absolute Percent n` reaches fixtures AND cells.
@@ -81,6 +88,15 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Activation groups drag linked channels into presets (prism rotation brings Prism1/Prism2/Prism2Pos). `Attribute "x" At KnockOut` works but breaks the next write by function name.
 - `ToAddr()` of a preset = `DataPool 2.5.<pool>.<no>`.
 - Import: `Import DataPool 2 Filter n /File "x.xml" /Path "..." /NoConfirm` (presets the same way).
+- Phaser by command: `Step 1`, `Attribute "Dimmer" At 100`, `Step 2`, `Attribute "Dimmer" At 0` ... then `Store Preset p.n /Universal|/Global`. Works for colour and position steps too.
+- `At -40 Thru 40` fans the values over the selection (selection order). A fan stored `/Global` collapses (one value per TYPE) -> fans need `/Selective`.
+  A Global preset still takes different values per fixture TYPE (e.g. one type with reversed tilt).
+- Programmer read-back `GetProgPhaser(..)[i].absolute` is in % of the channel range, not degrees (Tilt 0 deg = 50).
+- RGB-only fixtures (no dimmer channel) ignore every dimmer preset: they need a BLACK colour, colour phasers, colour bump sequences.
+- Colour of multi-instance fixtures lives in the sub-fixtures: read it with `Fixture N.*` selected, not the master.
+- `XYZ_X/Y/Z` attributes are refused when the fixture types have no XYZ ("Failed").
+- MA's predefined phasers (Import > Predefined Phasers) land in a preset pool ("All 5" = pool 25 here): Dim Sinus, Strobe, Rnd Strobe, Chase,
+  Circle, Eight, Tilt Sin, Pan Sin, Flyout, Rainbow, two-colour phasers ("SeaGreen Blue"...). Usable directly as recipe values.
 
 ## Fixture types, channel sets, gobo pictures
 - Type of a fixture: `GetSubfixture(idx):Get("FixtureType")` (handle; name matching is unsafe - two types can share a name), mode `tonumber(h:Get("Mode"):match("^(%d+)"))`.
@@ -123,8 +139,34 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - A MIDI remote cannot take an executor (Cannot Create Object), only objects.
 - Executor buttons have press and release functions.
 
+## Patch, fixture types, MVR
+- Import a library fixture type: `ChangeDestination Root`, `ChangeDestination "ShowData"`, `ChangeDestination "Patch"`, `ChangeDestination "FixtureTypes"`,
+  `Import Library "<file from gma3_library/fixturetypes or the MA library>"`, `ChangeDestination Root`. (`Import FixtureType Library ..` fails.)
+- Patch from Lua: `Patch()` (= LivePatch; `ShowData().Patch.Stages` is nil). Fixtures `Patch().Stages[1]` child "Fixtures".
+  Settable: `PosX/PosY/PosZ`, `RotX/RotY/RotZ`, `FID`, `Patch`, `Mode`, `Layer`. NOT possible: creating fixtures (`Fixtures:Append()` returns nil)
+  and changing the type (`Set FixtureType` is silently ignored).
+- New rigs therefore come in by MVR (Partial Show Read): real GDTFs in the zip, `GDTFMode` = the mode name, `<Addresses><Address break="0">abs</Address>`
+  after `UnitNumber` -> fixtures arrive typed, moded and patched.
+- MVR orientation: the 3D camera "Front" looks from -Y, so the audience must be on -Y. An already imported rig turns in place: every fixture
+  `PosX=-x, PosY=-y, RotZ+=180`.
+- Tilt direction of a type depends on the GDTF and the mount rotation: check in the 3D view, then flip the sign per type in the presets.
+
+## Timecode, sound
+- Sound: file + sidecar `<GMA3 DataVersion="2.5.1.1"><Sound FileName="x.mp3"/></GMA3>` in `gma3_library/media/sounds`,
+  `Import Sound 1 /File "x.mp3.xml" /Path "<dir>" /NoConfirm` -> `ShowData().MediaPools.Sounds[1]` (DURATION read-back), rename with `:Set("Name", ..)`.
+- Timecode: `Store Timecode n` + `Label`. Tree: Timecode -> TrackGroup -> Track (`tg:Append("Track")`, `Set("Target", seqOrSound)`) -> TimeRange
+  -> CmdSubTrack (`range:Append("CmdSubTrack")`) -> CmdEvent (`sub:Append("CmdEvent")`: `Time`, `Name`, `Token` "Goto" / "Temp",
+  `Status` "On"/"Off" for Temp press / release, `CueDestination` = cue handle).
+- The TimeRange exists only after the run that created the track -> build scripts run TWICE. A sound track = a track whose Target is the Sound.
+- Remove events: `sub:Delete(i)` from the end. Length: `tc:Set("Duration", "163")` (a STRING; a number set it to 0). `Store Timecode` also makes an empty "Track 1".
+- A Temp that starts a cue with Trig Time keeps running the follow-on cues (self-flipping sequence works from timecode).
+
+## Lyrics / song analysis (outside MA)
+- Word timestamps of a sung Hebrew song: faster-whisper `large-v3-turbo`, CPU int8, `language="he"`, `word_timestamps=True`, an `initial_prompt`
+  with the made-up words. Decode the mp3 with ffmpeg to 16 kHz float yourself (faster-whisper's PyAV call can break). Spoken countdowns get lost.
+
 ## Views, setup, export
-- `object:Export(dir, file)` works for View, Appearance, Configuration, Layout, Page; `Import View 99 /File .. /Path .. /NoConfirm`.
+- `object:Export(dir, file)` works for View, Appearance, Configuration, Layout, Page, Stage, Group, Timecode; `Import View 99 /File .. /Path .. /NoConfirm`.
 - Views: `ObjectList("View 1")` (not in DataPool). View buttons: `CurrentProfile().ScreenConfigurations[1][2][screen][button]:Get("OBJECT")`.
 - Windows: `ScreenContents`, X / Y / W / H in half cells (screen = 36 x 20).
 - System Monitor shows Lua errors with file + line; Command Line History does not.

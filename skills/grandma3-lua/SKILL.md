@@ -1,6 +1,6 @@
 ---
 name: grandma3-lua
-description: Writing, fixing or reviewing grandMA3 Lua plugins and macros (onPC / console 2.5.x) - objects, commands, macros and variables, sequences / recipes / cues, presets, fixture types and channel sets, gobo pictures, appearances and images, layouts, masters. Load it before writing MA3 plugin code or answering how grandMA3 behaves.
+description: Writing, fixing or reviewing grandMA3 Lua plugins and macros (onPC / console 2.5.x), or building a show over OSC / Lua - objects, commands, macros and variables, sequences / recipes / cues, timecode and sound, patch and MVR, presets and phasers, fixture types and channel sets, gobo pictures, appearances and images, layouts, masters. Load it before writing MA3 plugin code or answering how grandMA3 behaves.
 ---
 
 # grandMA3 Lua - how to work
