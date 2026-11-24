@@ -172,6 +172,31 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - System Monitor shows Lua errors with file + line; Command Line History does not.
 - `CopyCrashLog If Drive 1` copies crash logs.
 
+## Videos, Bitmaps (2.5.1.1, verified playing)
+- Video: file + sidecar `<Video FileName="x.webm"/>` in `gma3_library/media/videos`, then `Import Video n /File "x.webm.xml" /Path "<dir>" /NoConfirm`
+  (works directly, no cd). Pool = `ShowData().MediaPools.Videos`. Third-party software must be on in the EULA for playback.
+- Bitmap pool = `DataPool().GeneratorTypes.Bitmaps`; `Store Bitmap n` creates one. Children: `BitmapConfigs` -> `BitmapConfig`
+  (CONTENT = video handle via `:Set`, WIDTH, HEIGHT, INTERPOLATE, ALPHA, CONTENTMODE None/Clip/Wrap, CONTROLX/Y/ZOOM/ASPECT/ROTATE, COLORR/G/B)
+  and `BitmapChannels` (default: Dimmer<-Intensity, Dimmer VirtualDimmer<-Const, ColorRGB_R/G/B<-Red/Green/Blue).
+- The canvas maps onto the SELECTION GRID of the selection (no layout, no bitmap fixture as in MA2). Apply: `Group n` then `At Bitmap m`.
+
+## Remote control over OSC (verified 2.5.1.1 onPC)
+MA3 has no telnet. Command lines go in over OSC, answers come back from a Lua plugin.
+- Setup (the USER does it - remote-access setting). `Menu -> In & Out -> OSC`: Enable Input + Output, interface Loopback (127.0.0.1).
+  Line 1: `127.0.0.1` UDP `8000`, Receive Command = Yes, everything else No. Line 2: `127.0.0.1` UDP `8001`, Send Command = Yes, everything else No.
+  Never Send / Send Command on the receive line (it loops back).
+- **The station must be in a session** (Network menu, MA-Net interface Loopback, IdleMaster). Standalone opens NO OSC socket. Preferred IP must be current.
+- Check (no command needed): `Get-NetUDPEndpoint` / `netstat -ano -p udp` shows `0.0.0.0:8000` owned by app_gma3.
+- Send: `/cmd,s,<command line>`. No command-line feedback comes back. MA binds `0.0.0.0:<port>` for EVERY line, so the listener binds
+  `127.0.0.1:8001` with ReuseAddress.
+- Answer from Lua: `Cmd('SendOSC 2 "/bp,s,<text>"')` (2 = the OSC line number; no commas, no quotes in the text). Big results go to a file in `gma3_library`.
+- Pattern: a loader plugin imported ONCE runs scripts from disk with `loadfile`; Claude writes the script, triggers `Plugin "<loader>" "run <name> osc"`,
+  the script writes its log, then SendOSC says done. The script only answers over OSC when the argument holds `osc` (manual runs skip it).
+- Run the sender in-process in PowerShell (`& .\ma3osc.ps1 -Command '...'`); through `powershell -File` the inner double quotes get lost.
+- Read-only commands freely; anything that changes the show: ask the user first. Never while the user runs a show. Before a show: Receive Command = No.
+- `Import Group n /File "x.xml" /Path "<dir>" /NoConfirm` builds a group with grid positions from a hand-written xml
+  (`<Group Name=..><SelectionData Size=N><Item IDType="0" ID="31.4" X="3" Y="0" Z="0"/>`; no Guid needed).
+
 ## MA's StartShow
 - `MA_StartShow.show` (in the MA install, shared\resource\demoshows): groups Grid 1-8, Linear 19-26, Even 37-44, Odd 55-62, thirds 73-116 ;
   presets colours 4.1-4.15, positions 2.1-2.17, Gobo / Prism Rotate Stop / Left / Right 3.19-21 / 5.23-25 ; appearances 4987-5480 ; Layout 4 'Dimmer Phaser'.
