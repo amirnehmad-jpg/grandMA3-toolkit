@@ -121,6 +121,8 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Gobo picture: the channel function's `Wheel` -> slot (match the set name: exact, loose, prefix, same index, number "Gobo 3" -> "G03 (Cross)") -> slot `MediaFileName`
   -> image in `ShowData().MediaPools.Gobos` whose name contains the file's base name; else `slot:Get("Image")`. Put it on an appearance: `ap.Image = imgHandle`.
   MegaPointe: sets "Gobo 1..10" vs slots "G01 (MultiDots)..."; rotating sets "Gobo N - Rotation".
+- Not every strobe is on `Shutter1`: blinders in RGB modes (SOL I Blinder 4ch, 2-lite 1ch) have only Dimmer (+ RGB) ; JDC 1 strobes with logical channels
+  `StrobeRate` / `StrobeDuration` / `StrobeModeStrobe` per module (Beam / Plate). Read the logical channels before assuming.
 - Masters / sub-fixtures: values to a master reach sub-fixtures in Normal mode. Selecting a module's IF group keeps the value on that module. `Down` goes one level.
 - Group handle `:Count()` = 0 - count by selecting. `Grid x/y/0` + `Fixture a Fixture b` stores positions; `Fixture N.` = parent + descendants.
 
@@ -152,6 +154,8 @@ Only what a probe or a build log showed. "UNTESTED" = never run on a console. Wh
 - Page children: `page:Children()` (sparse; `page[i]` gives nil). Executor references in page xml are by NAME.
 - A MIDI remote cannot take an executor (Cannot Create Object), only objects.
 - Executor buttons have press and release functions.
+- Executor configuration: `Assign Configuration n At Page 1.101` works ; read back with `ObjectList("Page 1.101")[1]:Get("Config")` (or "ExecutorConfiguration") - `Configuration` / `ExecConfig` read nil.
+  A sequence of ANOTHER DataPool goes on an executor with `Assign DataPool 6 Sequence 2 At Page 1.101` (the executor shows `6.7.2`).
 
 ## Patch, fixture types, MVR
 - Import a library fixture type: `ChangeDestination Root`, `ChangeDestination "ShowData"`, `ChangeDestination "Patch"`, `ChangeDestination "FixtureTypes"`,
